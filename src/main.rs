@@ -1,75 +1,61 @@
 #![allow(unused)]
-#[warn(dead_code)]
-mod t_routes;
+mod utils;
+mod handler;
+mod model;
+mod route;
+mod schema;
 mod error;
-pub use self::error::{Error, Result}; 
+pub mod config;
+use route::create_router;
+use std::sync::Arc;
+use dotenv::dotenv;
+use config::Config;
 
 use axum::{
     routing::{get, post},
-    http::StatusCode,
+    http::{StatusCode,
+        header::{ACCEPT,AUTHORIZATION, CONTENT_TYPE},
+        HeaderValue, Method},
     extract::{Path, Query},
     Json, Router,
     response::{IntoResponse,Html}
-};
-use serde::{Deserialize, Serialize};
+    };
+use tower_http::cors::CorsLayer;
+use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
+pub struct AppState {
+    db: MySqlPool,
+    env: Config,
+}
 
 #[tokio::main]
 async fn main() {
-    // initialize tracing
-    tracing_subscriber::fmt::init();
-
-    // build our application with a route
-    let app = Router::new().merge(t_routes::test_routes());
-
-
-    // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
-}
-
-// basic handler that responds with a static string
-async fn root() -> &'static str {
-    "Hello, World!"
-}
-async fn groot() -> impl IntoResponse {
-   Html("<h1>Hello, Groot!</h1>")
-}
-async fn hello(Query(params):Query<HelloParams>) -> impl IntoResponse{
-    let name = params.name.as_deref().unwrap_or("stranger");
-    Html(format!("<h1>Hello <strong>{name}</strong></h1>"))
-} 
-async fn fello(Path(name): Path<String>) -> impl IntoResponse{
-    Html(format!("<p>Hello <strong>{name}</strong></p>"))
-} 
-
-async fn create_user(
-    // this argument tells axum to parse the request body
-    // as JSON into a `CreateUser` type
-    Json(payload): Json<CreateUser>,
-) -> (StatusCode, Json<User>) {
-    // insert your application logic here
-    let user = User {
-        id: 1337,
-        username: payload.username,
+    dotenv().ok();
+    let config = Config::init();
+    let database_url = std::env::var("DATABASE_URL").expect("env variable `DATABASE_URL` must be set");
+    let pool = match MySqlPoolOptions::new()
+        .max_connections(10)
+        .connect(&database_url)
+        .await
+    {
+        Ok(pool) => {
+            println!("✅Connection to the database is successful!");
+            pool
+        }
+        Err(err) => {
+            println!("🔥 Failed to connect to the database: {:?}", err);
+            std::process::exit(1);
+        }
     };
+    let origin_url = std::env::var("ALLOW_ORIGIN").expect("env variable `ALLOW_ORIGIN` must be set");
+    let cors = CorsLayer::new()
+        .allow_origin(origin_url.parse::<HeaderValue>().unwrap())
+        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
+        .allow_credentials(true)
+        .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(user))
-}
+    let app = create_router(Arc::new(AppState {db:pool.clone(), env: config.clone(), })).layer(cors);
 
-// the input to our `create_user` handler
-#[derive(Deserialize)]
-struct CreateUser {
-    username: String,
-}
-struct HelloParams{
-    name: Option<String>,
-}
-
-// the output to our `create_user` handler
-#[derive(Serialize)]
-struct User {
-    id: u64,
-    username: String,
+    println!("🚀 Server started successfully");
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    axum::serve(listener, app).await.unwrap()
 }

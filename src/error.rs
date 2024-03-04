@@ -1,26 +1,31 @@
-use axum::{
-    response::{IntoResponse, Response},
-    http::StatusCode
-};
-
-pub type Result<T> = core::result::Result<T, Error>;
+use axum::{http::StatusCode, response::IntoResponse, Json};
+use serde_json::json;
 
 #[derive(Debug)]
-pub enum Error{
-    LoginFail,
+pub enum AppError {
+    InvalidToken,
+    WrongCredential,
+    MissingCredential,
+    TokenCreation,
+    InternalServerError,
+    UserDoesNotExist,
+    UserAlreadyExits,
 }
 
-impl IntoResponse for Error{
-    fn into_response(self) -> Response {
-        println!("->> {:<12} - {self:?}", "INTO_RES");
-        (StatusCode::INTERNAL_SERVER_ERROR, "UNHANDLED_SERVER_ERROR").into_response()
+impl IntoResponse for AppError {
+    fn into_response(self) -> axum::response::Response {
+        let (status, err_msg) = match self {
+            Self::InternalServerError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "An internal server error occured",
+            ),
+            Self::InvalidToken => (StatusCode::BAD_REQUEST, "Invalid token"),
+            Self::MissingCredential => (StatusCode::BAD_REQUEST, "Missing credential"),
+            Self::TokenCreation => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create token"),
+            Self::WrongCredential => (StatusCode::UNAUTHORIZED, "Wrong credentials"),
+            Self::UserDoesNotExist => (StatusCode::UNAUTHORIZED, "User does not exist"),
+            Self::UserAlreadyExits => (StatusCode::BAD_REQUEST, "User already exists"),
+        };
+        (status, Json(json!({ "error": err_msg }))).into_response()
     }
 }
-
-// impl std::fmt::Display for Error {
-//     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> core::result::Result<(), std::fmt::Formatter>{
-//         write!(fmt, "{self:?}")
-//     }
-// }
-
-// impl std::error::Error for Error {}
