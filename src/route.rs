@@ -17,9 +17,7 @@ use crate::{
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {
     Router::new()
-        .route(
-            "/api/users/me",
-            get(get_me_handler)
+        .route("/api/users/me",get(get_me_handler)
                 .route_layer(middleware::from_fn_with_state(app_state.clone(), auth)),
         )
         .route("/api/logout", get(logout_handler))
@@ -28,11 +26,9 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .route("/api/healthchecker", get(health_checker_handler))
         .route("/api/ticket/all", get(ticket_list_handler))
         .route("/api/ticket/", post(create_ticket_handler))
-        .route(
-            "/api/ticket/:id", 
-    get(get_ticket_handler)
-                    .patch(edit_ticket_handler)
-                    .delete(delete_ticket_handler)
-                )
+        .route("/api/ticket/:id", get(get_ticket_handler)
+            .patch(edit_ticket_handler)
+            .delete(delete_ticket_handler)
+        )
         .with_state(app_state)
 }

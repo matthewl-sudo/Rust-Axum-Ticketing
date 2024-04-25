@@ -23,9 +23,9 @@ pub struct TokenClaims {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RegisterSchema {
-    pub name: String,
     pub email: String,
     pub password: String,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

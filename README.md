@@ -31,3 +31,4 @@ choice of india
 namaste india kitchen
 kashmiri delight
 spirit of india
+Classic Indian Restaurant and Bar
