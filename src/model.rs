@@ -11,18 +11,7 @@ pub struct FilteredUser {
     pub role: String,
 }
 
-#[derive(Serialize, Debug)]
-pub struct UserData {
-    pub user: FilteredUser,
-}
-
-#[derive(Serialize, Debug)]
-pub struct UserResponse {
-    pub status: String,
-    pub data: UserData,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TokenClaims {
     pub sub: String,
     pub exp: usize, // (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)

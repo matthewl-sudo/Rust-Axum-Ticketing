@@ -1,35 +1,46 @@
-// use axum::http::StatusCode;
-// use chrono::{Utc, Duration};
-// use jsonwebtoken::{encode, Header, EncodingKey, TokenData, decode, DecodingKey, Validation};
-// use serde::{Deserialize, Serialize};
-// use crate::utils;
-// use std::env;
-// use dotenv::dotenv;
+use axum::{http::StatusCode, response::IntoResponse, Json};
+use chrono::{Utc, Duration};
+use jsonwebtoken::{encode, Header, EncodingKey, errors::Error, TokenData, decode, DecodingKey, Validation};
+use serde::{Deserialize, Serialize};
+use crate::{model::TokenClaims, utils};
+use dotenv::dotenv;
 
-// #[derive(Serialize, Deserialize)]
-// pub struct Claims{
-//     pub exp: usize, // (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
-//     pub iat: usize, // Issued at (as UTC timestamp)
-//     pub email: String,
-// }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ErrorResponse {
+    pub status: &'static str,
+    pub message: String,
+}
 
-// pub fn encode_jwt(email: String) -> Result<String, StatusCode>{
-//     dotenv().ok();
-//     let now = Utc::now();
-//     let expire = Duration::hours(24);
+pub fn token_encode(
+    header: &Header,
+    id: String,
+    key: &EncodingKey,
+) -> String {
+    let now = chrono::Utc::now();
+    let iat = now.timestamp() as usize;
+    let exp = (now + chrono::Duration::minutes(60)).timestamp() as usize;
+    let claims: TokenClaims = TokenClaims {
+        sub: id,
+        exp,
+        iat,
+    };
+    let token = encode(header, &claims, key);
+    return token.expect("returns encoded token string");
+}
 
-//     let claim = Claims{iat:now.timestamp() as usize, exp: (now+expire).timestamp() as usize, email:email};
-//     let secret: String = (env::var("TOKEN").unwrap()).clone();
-//     return encode(&Header::default(), &claim, &EncodingKey::from_secret(secret.as_ref()))
-//         .map_err(|err| {
-//             StatusCode::INTERNAL_SERVER_ERROR
-//         });
-// }
-
-// pub fn decode_jwt(jwt: String) -> Result<TokenData<Claims>, StatusCode>{
-//     dotenv().ok();
-//     let secret: String = (env::var("TOKEN").unwrap()).clone();
-//     let res: Result<TokenData<Claims>, StatusCode> = decode(&jwt,&DecodingKey::from_secret(secret.as_ref()),&Validation::default())
-//     .map_err(|_| { StatusCode::INTERNAL_SERVER_ERROR });
-//     return res;
-// }
+pub fn token_decode(token: String, key: &DecodingKey) 
+->  Result<TokenClaims, (StatusCode, Json<ErrorResponse>)> {
+    let claims = decode::<TokenClaims>(
+        &token,
+        key,
+        &Validation::default(),
+    )
+    .map_err(|_| {
+        let json_error = ErrorResponse {
+            status: "Error",
+            message: "Invalid token".to_string(),
+        };
+        (StatusCode::UNAUTHORIZED, Json(json_error))
+    })?.claims;
+    return Ok(claims);
+}

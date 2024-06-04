@@ -8,20 +8,6 @@ use serde::{Deserialize, Serialize};
 // and Deserialization from frontend to backend.
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AuthStateSchema {
-    #[serde(skip_serializing)]
-    pub token: Option<String>,
-    pub logged_in: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TokenClaims {
-    pub sub: String,
-    pub iat: usize,
-    pub exp: usize,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct RegisterSchema {
     pub email: String,
     pub password: String,

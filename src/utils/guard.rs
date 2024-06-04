@@ -1,39 +1,93 @@
-// use axum::{
-//     Extension,
-//     extract::State,
-//     http::{ Request, StatusCode}, 
-//     middleware::Next, response::Response, 
-// };
-// use axum_extra::{
-//     headers::{authorization::Bearer, Authorization, HeaderMapExt},
-//     TypedHeader,
-//     extract,
-// };
-// // use axum_extra::headers::{HeaderMapExt, Authorization, authorization::Bearer}
-// use super::jwt::decode_jwt;
-// use sqlx::MySqlPool;
-// use crate::{error::AppError, AppState}; 
+use std::sync::Arc;
 
+use axum::{
+    extract::State,
+    http::{header, Request, StatusCode},
+    middleware::Next,
+    response::IntoResponse,
+    Json, body::Body,
+};
+use std::str::FromStr;
+use axum_extra::extract::cookie::CookieJar;
+use jsonwebtoken::{ DecodingKey, Validation};
+use serde::Serialize;
 
-// pub async fn guard<T>(
-//     mut req: Request<T>, next: Next,Extension(pool): Extension<MySqlPool>) -> Result<Response, AppError> {
+use crate::{
+    model::LoginModel,
+    AppState,
+};
 
-//     let token = req.headers().typed_get::<Authorization<Bearer>>()
-//     .ok_or(AppError::InvalidToken)?.token().to_owned();
+use super::jwt::token_decode;
 
-//     let claim = decode_jwt(token)
-//     .map_err(|err| AppError::UserDoesNotExist )?.claims;
+#[derive(Debug, Serialize)]
+pub struct ErrorResponse {
+    pub status: &'static str,
+    pub message: String,
+}
 
-//     let db = req.extensions().get::State(&pool)()
-//     .ok_or(AppError::InternalServerError)?;
+// Decodes access token and returns user info
+pub async fn auth_guard(
+    cookie_jar: CookieJar,
+    State(data): State<Arc<AppState>>,
+    mut req: Request<Body>,
+    next: Next,
+) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+    let token = cookie_jar
+        .get("token")
+        .map(|cookie| cookie.value().to_string())
+        .or_else(|| {
+            req.headers()
+                .get(header::AUTHORIZATION)
+                .and_then(|auth_header| auth_header.to_str().ok())
+                .and_then(|auth_value| {
+                    if auth_value.starts_with("Bearer ") {
+                        Some(auth_value[7..].to_owned())
+                    } else {
+                        None
+                    }
+                })
+        });
 
-//     let identity = entity::user::Entity::find()
-//     .filter(entity::user::Column::Email.eq(claim.email.to_lowercase()))
-//     .one(db)
-//     .await.map_err(|err|  AppError::TokenCreation)?
-//     .ok_or(AppError::WrongCredential)?;
+    let token = token.ok_or_else(|| {
+        let json_error = ErrorResponse {
+            status: "Error",
+            message: "You are not logged in, please provide token".to_string(),
+        };
+        (StatusCode::UNAUTHORIZED, Json(json_error))
+    })?;
 
-//     req.extensions_mut().insert(identity);
+    let claims = token_decode(
+        token, 
+        &DecodingKey::from_secret(data.env.jwt_secret.as_ref()
+    )).unwrap();
 
-//     Ok(next.run(req).await)
-// } 
+    let user_id = (&claims.sub).parse::<i64>().map_err(|_| {
+        let json_error = ErrorResponse {
+            status: "Error",
+            message: "Invalid id".to_string(),
+        };
+        (StatusCode::UNAUTHORIZED, Json(json_error))
+    })?;
+
+    let user = sqlx::query_as!(LoginModel, "SELECT * FROM login WHERE id = ?", user_id)
+        .fetch_optional(&data.db)
+        .await
+        .map_err(|e| {
+            let json_error = ErrorResponse {
+                status: "Error",
+                message: format!("Error fetching user from database: {}", e),
+            };
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json_error))
+        })?;
+
+    let user = user.ok_or_else(|| {
+        let json_error = ErrorResponse {
+            status: "Error",
+            message: "The user belonging to this token no longer exists".to_string(),
+        };
+        (StatusCode::UNAUTHORIZED, Json(json_error))
+    })?;
+
+    req.extensions_mut().insert(user);
+    Ok(next.run(req).await)
+}

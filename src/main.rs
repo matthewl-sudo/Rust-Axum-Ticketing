@@ -1,6 +1,6 @@
 #![allow(unused)]
 mod utils;
-mod handler;
+mod handlers;
 mod model;
 mod route;
 mod schema;
