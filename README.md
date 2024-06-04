@@ -33,7 +33,7 @@ Highlight the main features of your API.
 1. **Clone the repository:**
 
 ```sh
-git clone https://github.com/matthewl-sudo/axum-ticketing.git
+git clone https://github.com/matthewl-sudo/Rust-Axum-Ticketing.git
 ```
 
 2.  **Navigate to the project directory:**
