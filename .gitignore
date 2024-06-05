@@ -1,5 +1,5 @@
 /target
 .env
 dashboard
-/migrations
+migrations
 OLDREADME.md

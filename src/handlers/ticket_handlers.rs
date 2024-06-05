@@ -30,7 +30,7 @@ pub async fn ticket_list_handler(
     
     let tickets = sqlx::query_as!(
         TicketModel,
-        r#"SELECT * FROM ticket ORDER by create_date DESC LIMIT ? OFFSET ?"#,
+        r#"SELECT * FROM tickets ORDER by create_date DESC LIMIT ? OFFSET ?"#,
         limit as i64,
         offset as i64
     )
@@ -63,7 +63,7 @@ pub async fn create_ticket_handler(
     Json(body): Json<CreateTicketSchema>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let query_result =
-        sqlx::query(r#"INSERT INTO ticket (summary, priority, status) VALUES (?, ?, ?)"#)
+        sqlx::query(r#"INSERT INTO tickets (summary, priority, status) VALUES (?, ?, ?)"#)
             .bind(body.summary.to_string())
             .bind(body.priority.to_string())
             .bind(body.status.to_string())
@@ -97,18 +97,16 @@ pub async fn get_ticket_handler(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let query_result = sqlx::query_as!(
         TicketModel,
-        r#"SELECT * FROM ticket WHERE id = ?"#,
+        r#"SELECT * FROM tickets WHERE id = ?"#,
         id.to_string()
     )
     .fetch_one(&data.db)
     .await;
 
+
     match query_result {
         Ok(ticket) => {
-            let ticket_response = serde_json::json!({
-                "ticket": filter_db_record(&ticket),
-                "status": "success" 
-            });
+            let ticket_response = serde_json::json!(filter_db_record(&ticket));
 
             return Ok(Json(ticket_response));
         }
@@ -135,7 +133,7 @@ pub async fn edit_ticket_handler(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let query_result = sqlx::query_as!(
         TicketModel,
-        r#"SELECT * FROM ticket WHERE id = ?"#,
+        r#"SELECT * FROM tickets WHERE id = ?"#,
         id.to_string()
     )
     .fetch_one(&data.db)
@@ -159,7 +157,7 @@ pub async fn edit_ticket_handler(
     };
 
     let update_result = sqlx::query(
-        r#"UPDATE ticket SET summary = ?, status = ?, priority = ?, update_date = ? WHERE id = ?"#,
+        r#"UPDATE tickets SET summary = ?, status = ?, priority = ?, update_date = ? WHERE id = ?"#,
     )
     .bind(body.summary.to_owned().unwrap_or_else(|| ticket.summary.clone()))
     .bind(
@@ -190,7 +188,7 @@ pub async fn edit_ticket_handler(
 
     let updated_ticket = sqlx::query_as!(
         TicketModel,
-        r#"SELECT * FROM ticket WHERE id = ?"#,
+        r#"SELECT * FROM tickets WHERE id = ?"#,
         id.to_string()
     )
     .fetch_one(&data.db)
@@ -214,7 +212,7 @@ pub async fn delete_ticket_handler(
     Path(id): Path<i64>,
     State(data): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let query_result = sqlx::query!(r#"DELETE FROM ticket WHERE id = ?"#, id.to_string())
+    let query_result = sqlx::query!(r#"DELETE FROM tickets WHERE id = ?"#, id.to_string())
         .execute(&data.db)
         .await
         .map_err(|e| {
