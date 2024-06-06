@@ -8,6 +8,13 @@ use serde::{Deserialize, Serialize};
 // and Deserialization from frontend to backend.
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct CreateCommentSchema {
+    pub content: String,
+    pub author_id: i64,
+    pub ticket_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RegisterSchema {
     pub email: String,
     pub password: String,
@@ -28,7 +35,6 @@ pub struct FilterOptions {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CreateTicketSchema {
-    // pub title: String,
     pub summary: String,
     // #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: String,
@@ -38,7 +44,6 @@ pub struct CreateTicketSchema {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UpdateTicketSchema {
-    // pub title: Option<String>,
     pub summary: Option<String>,
     pub priority: Option<String>,
     pub status: Option<String>,

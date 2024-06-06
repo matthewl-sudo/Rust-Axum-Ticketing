@@ -8,9 +8,7 @@ use axum::{
 use crate::{
     handlers::{
         auth_handlers::{
-         login_handler, logout_handler, register_handler, get_me_handler, refresh_token_handler}, 
-        ticket_handlers::{ticket_list_handler, create_ticket_handler, delete_ticket_handler, 
-        edit_ticket_handler, get_ticket_handler, health_checker_handler,}
+         get_me_handler, login_handler, logout_handler, refresh_token_handler, register_handler}, comment_handlers::{comments_list_handler, create_comment_handler}, ticket_handlers::{create_ticket_handler, delete_ticket_handler, edit_ticket_handler, get_ticket_handler, health_checker_handler, ticket_list_handler}
     },
     utils::guard::auth_guard,
     AppState,
@@ -32,5 +30,7 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
             .patch(edit_ticket_handler)
             .delete(delete_ticket_handler)
         )
+        .route("/api/comments/:id", get(comments_list_handler))
+        .route("/api/comments/", post(create_comment_handler))
         .with_state(app_state)
 }

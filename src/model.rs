@@ -2,6 +2,26 @@ use serde::{Deserialize, Serialize};
 
 use chrono::prelude::*;
 
+#[derive(Debug, Deserialize, Serialize, sqlx::FromRow)]
+#[allow(non_snake_case)]
+pub struct CommentModel {
+    pub id: i64,
+    pub content: String,
+    pub author_id: i64,
+    pub create_date: Option<chrono::DateTime<chrono::Utc>>,
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(non_snake_case)]
+pub struct CommentModelResponse {
+    pub id: i64,
+    pub content: String,
+    pub author_id: i64,
+    pub create_date: Option<chrono::DateTime<chrono::Utc>>,
+    pub name: String,
+}
+
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize)]
 pub struct FilteredUser {

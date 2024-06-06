@@ -1,7 +1,7 @@
 -- Add up migration script here
 
 CREATE TABLE
-    IF NOT EXISTS notes (
+    IF NOT EXISTS tikets (
         id BIGINT PRIMARY KEY NOT NULL AUTO_INCREMENT,
         -- title VARCHAR(255) NOT NULL UNIQUE,
         summary TEXT NOT NULL,
@@ -16,10 +16,10 @@ comments | CREATE TABLE `comments` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `content` varchar(255) NOT NULL,
   `create_date` timestamp NULL DEFAULT CURRENT_TIMEST
-  `ticketID` bigint NOT NULL,
+  `ticket_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `ticketID` (`ticketID`),
-  CONSTRAINT `comments_ibfk_1` FOREIGN KEY (`ticketID
+  KEY `ticket_id` (`ticket_id`),
+  CONSTRAINT `comments_ibfk_1` FOREIGN KEY (`ticket_id
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8`
 
 -- this is a query to get comments from ticket ID
