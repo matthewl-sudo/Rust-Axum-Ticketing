@@ -57,7 +57,11 @@ pub async fn comments_list_handler(
 
         let query_result = sqlx::query_as!(
         CommentModel,
-        r#"SELECT c.id, c.content, c.create_date, c.author_id, u.name FROM comments c JOIN login u ON c.author_id = u.id WHERE c.ticket_id = ?"#,
+        r#"SELECT c.id, 
+        c.content, c.create_date, 
+        c.author_id, login.name 
+        FROM comments c JOIN login 
+        ON c.author_id = login.id WHERE c.ticket_id = ?"#,
         ticket_id.to_string()
     )
         .fetch_all(&data.db)
